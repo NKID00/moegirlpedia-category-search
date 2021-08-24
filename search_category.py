@@ -18,12 +18,12 @@ def read_one(title: str) -> FrozenSet[Tuple[int, str]]:
 
 class SearchCli(Cmd):
     intro = (
-        '|<标题> -> 取并集\n'
-        '&<标题> -> 取交集\n'
-        '-<标题> -> 取差集\n'
-        '^<标题> -> 取对称差集\n'
-        's<标题> -> 保存当前集合\n'
-        'p -> 打印当前集合\n'
+        '|<分类标题> -> 取并集\n'
+        '&<分类标题> -> 取交集\n'
+        '-<分类标题> -> 取差集\n'
+        '^<分类标题> -> 取对称差集\n'
+        's<分类标题> -> 保存当前集合\n'
+        'p -> 显示当前集合\n'
         'o -> 打开当前集合对应页面\n'
         'exit -> 退出'
     )
@@ -65,10 +65,13 @@ class SearchCli(Cmd):
                                 new=2
                             )
                             count += 1
-                    input(
-                        f'已打开 {count} 个页面，'
-                        f'还剩 {len(self.data) - count} 个，按回车继续...'
-                    )
+                    if len(self.data) - count > 0:
+                        input(
+                            f'已打开 {count} 个页面，'
+                            f'还剩 {len(self.data) - count} 个，按回车继续...'
+                        )
+                    else:
+                        print(f'已打开 {count} 个页面')
                 return False
             else:
                 print('未知的命令')
