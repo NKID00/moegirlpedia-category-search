@@ -20,11 +20,11 @@ $ python3 search_category.py
 
 ### 示例：查找黑发蓝瞳双马尾有呆毛又是黑客的人物
 
-注：该示例运行于 2021.8.24，数据可能会有所出入
+注：该示例运行于 2021.8.25，数据可能会有所出入
 
 ```
 $ python3 search_category.py
-moegirlpedia-category-search v0.1.1
+moegirlpedia-category-search v0.1.2
 
 ... 略过一些提示 ...
 
@@ -46,10 +46,8 @@ moegirlpedia-category-search v0.1.1
 >>> &黑客
 正在下载第 1 页... 已获取 42 个，共获取 42 个
 4 -> 1          <- 只剩一个条目啦
->>> p           <- 显示出当前集合中的条目标题
+>>> o           <- 显示出当前集合中的条目标题并在浏览器中打开对应页面
 赛小盐
-共 1 个
->>> o           <- 在浏览器中打开当前集合中的条目对应页面
 已打开 1 个页面
 ```
 
