@@ -2,6 +2,7 @@ from json import load, JSONDecodeError
 from cmd import Cmd
 from itertools import zip_longest
 from webbrowser import open as webbrower_open
+from urllib.parse import quote
 from typing import FrozenSet, Tuple
 
 from util import __version__, root_dir
@@ -55,16 +56,15 @@ class SearchCli(Cmd):
                 print(f'共 {len(self.data)} 个')
                 return False
             elif line.lower().startswith('o'):
-                it = iter(sorted(self.data))
                 count = 0
-                for chunk in zip_longest(*[it]*10):
-                    for title in chunk:
-                        if title is not None:
-                            webbrower_open(
-                                f'https://zh.moegirl.org.cn/{title}',
+                sorted_data = sorted(self.data)
+                for chunk in sorted_data:
+                    print(chunk)
+                    webbrower_open(
+                                'https://zh.moegirl.org.cn/%s' % quote(chunk, encoding='utf-8'),
                                 new=2
                             )
-                            count += 1
+                    count+=1
                     if len(self.data) - count > 0:
                         input(
                             f'已打开 {count} 个页面，'
@@ -72,6 +72,7 @@ class SearchCli(Cmd):
                         )
                     else:
                         print(f'已打开 {count} 个页面')
+
                 return False
             else:
                 print('未知的命令')
