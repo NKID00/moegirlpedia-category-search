@@ -3,19 +3,28 @@ from cmd import Cmd
 from itertools import zip_longest
 from webbrowser import open as webbrowser_open
 from urllib.parse import quote
-from typing import FrozenSet, Tuple
+from typing import Set
 
-from util import __version__, root_dir
+from util import __version__, ROOT_DIR
 from download_category import download_and_write, write_one
 
-def read_one(title: str) -> FrozenSet[Tuple[int, str]]:
-    path = root_dir / f'{title}.json'
+def read_one(title: str, include_subcat: bool) -> Set[str]:
+    path = ROOT_DIR / f'{title}.json'
     if path.exists():
+        print(f'正在读取分类"{title}"...')
         with open(path, 'r', encoding='utf8') as f:
-            return frozenset(load(f))
+            subcats, data = load(f)
+        data = set(data)
+        if include_subcat:
+            for subcat in subcats:
+                data |= read_one(subcat, True)
+        return data
     else:
-        download_and_write(title)
-        return read_one(title)
+        print(f'正在下载分类"{title}"...')
+        if download_and_write(title):
+            return read_one(title, include_subcat)
+        else:
+            return set()
 
 class SearchCli(Cmd):
     intro = (
@@ -23,6 +32,7 @@ class SearchCli(Cmd):
         '&<分类标题> -> 取交集\n'
         '-<分类标题> -> 取差集\n'
         '^<分类标题> -> 取对称差集\n'
+        '在以上命令前加 * 则包括子分类（警告：一些分类可能拥有极其庞大的子分类网络）\n'
         's<分类标题> -> 保存当前集合\n'
         'p -> 显示当前集合\n'
         'o[每次打开的数量，0 为全部，默认 10]'
@@ -32,7 +42,7 @@ class SearchCli(Cmd):
     prompt = '>>> '
 
     def preloop(self):
-        self.data = frozenset()
+        self.data = set()
 
     def default(self, line: str) -> bool:
         if line == 'exit':
@@ -40,16 +50,25 @@ class SearchCli(Cmd):
 
         try:
             length = len(self.data)
-            if line.startswith('|'):
-                self.data = self.data | read_one(line[1:])
-            elif line.startswith('&'):
-                self.data = self.data & read_one(line[1:])
-            elif line.startswith('-'):
-                self.data = self.data - read_one(line[1:])
-            elif line.startswith('^'):
-                self.data = self.data ^ read_one(line[1:])
+            if line.startswith(('*', '|', '&', '-', '^')):
+                if line.startswith('*'):
+                    include_subcat = True
+                    line = line[1:]
+                else:
+                    include_subcat = False
+                if line.startswith('|'):
+                    self.data |= read_one(line[1:], include_subcat)
+                elif line.startswith('&'):
+                    self.data &= read_one(line[1:], include_subcat)
+                elif line.startswith('-'):
+                    self.data -= read_one(line[1:], include_subcat)
+                elif line.startswith('^'):
+                    self.data ^= read_one(line[1:], include_subcat)
+                else:
+                    print('未知的命令')
+                    return False
             elif line.lower().startswith('s'):
-                write_one(sorted(self.data), line[1:])
+                write_one([], sorted(self.data), line[1:])
                 return False
             elif line.lower().startswith('p'):
                 for title in sorted(self.data):
@@ -102,8 +121,6 @@ class SearchCli(Cmd):
             else:
                 print('未知的命令')
                 return False
-        except KeyError as e:
-            print(e.args[0])
         except JSONDecodeError as e:
             print(
                 'JSON 解析失败，'

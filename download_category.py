@@ -2,20 +2,19 @@ from json import dump, JSONDecodeError
 from operator import itemgetter
 from typing import List, Optional, Tuple
 
-from httpx import Client
+from httpx import Client, HTTPStatusError
 
-from util import __version__, root_dir, user_agent
-
+from util import __version__, ROOT_DIR, USER_AGENT, PROXY
 
 def download_one_page(
-    client: Client, title: str, cmcontinue: Optional[str]
-) -> Tuple[Optional[str], List[Tuple[int, str]]]:
+    client: Client, title: str, cmtype: str, cmcontinue: Optional[str]
+) -> Tuple[Optional[str], List[str]]:
     params = {
         'action': 'query',
         'list': 'categorymembers',
         'format': 'json',
         'cmprop': 'title',
-        'cmtype': 'page',
+        'cmtype': cmtype,
         'cmlimit': '5000',
         'cmtitle': f'Category:{title}'
     }
@@ -34,34 +33,65 @@ def download_one_page(
     ))
 
 
-def download_all(client: Client, title: str) -> List[Tuple[int, str]]:
+def download_all(client: Client, title: str) -> Tuple[List[str], List[str]]:
     i = 1
-    print('正在下载第 1 页...', end=' ')
-    cmcontinue, data = download_one_page(client, title, None)
-    result = data
-    print(f'已获取 {len(data)} 个，共获取 {len(result)} 个', end='\r')
+    print('正在下载子分类信息的第 1 页...', end=' ')
+    cmcontinue, data = download_one_page(client, title, 'subcat', None)
+    data = list(map(
+        lambda s: s.replace('Category:', '').replace('分类:', ''),
+        data
+    ))
+    subcat = data
+    print(f'已获取 {len(data)} 个，共获取 {len(subcat)} 个子分类', end='\r')
     while cmcontinue is not None:
         i += 1
-        print(f'正在下载第 {i} 页...', end=' ')
-        cmcontinue, data = download_one_page(client, title, cmcontinue)
-        result.extend(data)
-        print(f'已获取 {len(data)} 个，共获取 {len(result)} 个', end='\r')
-    if len(result) == 0:
-        print()
-        raise KeyError(f'Category:{title} 为空！')
+        print(f'正在下载子分类信息的第 {i} 页...', end=' ')
+        cmcontinue, data = download_one_page(
+            client, title, 'subcat', cmcontinue
+        )
+        data = list(map(
+            lambda s: s.replace('Category:', '').replace('分类:', ''),
+            data
+        ))
+        subcat.extend(data)
+        print(f'已获取 {len(data)} 个，共获取 {len(subcat)} 个子分类', end='\r')
     print()
-    return result
 
-def write_one(data, title):
-    root_dir.mkdir(exist_ok=True)
-    with open(root_dir / f'{title}.json', 'w', encoding='utf8') as f:
-        dump(data, f, ensure_ascii=False, separators=(',', ':'))
+    i = 1
+    print('正在下载页面信息的第 1 页...', end=' ')
+    cmcontinue, data = download_one_page(client, title, 'page', None)
+    result = data
+    print(f'已获取 {len(data)} 个，共获取 {len(result)} 个页面', end='\r')
+    while cmcontinue is not None:
+        i += 1
+        print(f'正在下载页面信息的第 {i} 页...', end=' ')
+        cmcontinue, data = download_one_page(
+            client, title, 'page', cmcontinue
+        )
+        result.extend(data)
+        print(f'已获取 {len(data)} 个，共获取 {len(result)} 个页面', end='\r')
+    print()
 
-def download_and_write(title: str):
-    with Client(headers={
-        'User-Agent': user_agent
-    }) as client:
-        write_one(download_all(client, title), title)
+    if len(subcat) == 0 and len(result) == 0:
+        print(f'分类"{title}"为空！')
+
+    return subcat, result
+
+def write_one(subcat: List[str], data: List[str], title: str):
+    ROOT_DIR.mkdir(exist_ok=True)
+    with open(ROOT_DIR / f'{title}.json', 'w', encoding='utf8') as f:
+        dump([subcat, data], f, ensure_ascii=False, separators=(',', ':'))
+
+def download_and_write(title: str) -> bool:
+    with Client(headers={'User-Agent': USER_AGENT}, proxies=PROXY) as client:
+        try:
+            write_one(*download_all(client, title), title)
+        except HTTPStatusError as e:
+            print()
+            print(f'HTTP 状态异常：{e.response.status_code}')
+            return False
+        else:
+            return True
         
 
 

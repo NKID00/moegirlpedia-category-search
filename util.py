@@ -4,9 +4,10 @@ from pathlib import Path
 
 from httpx import __version__ as httpx_version
 
-root_dir = Path('cache/')
-user_agent = (
+ROOT_DIR = Path('cache/')
+USER_AGENT = (
     f'moegirlpedia-category-search/{__version__}'
     f' (https://github.com/NKID00/moegirlpedia-category-search)'
     f' httpx/{httpx_version}'
 )
+PROXY = None
