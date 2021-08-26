@@ -15,6 +15,7 @@ def download_one_page(
         'list': 'categorymembers',
         'format': 'json',
         'cmprop': 'title',
+        'cmtype': 'page',
         'cmlimit': '5000',
         'cmtitle': f'Category:{title}'
     }
