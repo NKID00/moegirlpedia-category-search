@@ -13,7 +13,12 @@ def read_one(title: str, include_subcat: bool) -> Set[str]:
     if path.exists():
         print(f'正在读取分类"{title}"...')
         with open(path, 'r', encoding='utf8') as f:
-            subcats, data = load(f)
+            data = load(f)
+        if len(data) != 2 or isinstance(data[0], str):  # 需要更新 cache
+            print('分类不兼容')
+            path.unlink()
+            return read_one(title, include_subcat)
+        subcats, data = data
         data = set(data)
         if include_subcat:
             for subcat in subcats:
@@ -32,7 +37,8 @@ class SearchCli(Cmd):
         '&<分类标题> -> 取交集\n'
         '-<分类标题> -> 取差集\n'
         '^<分类标题> -> 取对称差集\n'
-        '在以上命令前加 * 则包括子分类（警告：一些分类可能拥有极其庞大的子分类网络）\n'
+        '在以上命令前加 * 则递归包含子分类'
+        '（警告：一些分类可能拥有极其庞大的子分类网络）\n'
         's<分类标题> -> 保存当前集合\n'
         'p -> 显示当前集合\n'
         'o[每次打开的数量，0 为全部，默认 10]'
