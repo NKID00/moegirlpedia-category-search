@@ -1,5 +1,6 @@
 from json import dump, JSONDecodeError
 from operator import itemgetter
+from time import sleep
 from typing import List, Optional, Tuple
 
 from httpx import Client, HTTPStatusError
@@ -55,6 +56,7 @@ def download_all(client: Client, title: str) -> Tuple[List[str], List[str]]:
         ))
         subcat.extend(data)
         print(f'已获取 {len(data)} 个，共获取 {len(subcat)} 个子分类', end='\r')
+        sleep(0.2)  # 防止 403
     print()
 
     i = 1
@@ -70,6 +72,7 @@ def download_all(client: Client, title: str) -> Tuple[List[str], List[str]]:
         )
         result.extend(data)
         print(f'已获取 {len(data)} 个，共获取 {len(result)} 个页面', end='\r')
+        sleep(0.2)  # 防止 403
     print()
 
     if len(subcat) == 0 and len(result) == 0:
@@ -85,10 +88,12 @@ def write_one(subcat: List[str], data: List[str], title: str):
 def download_and_write(title: str) -> bool:
     with Client(headers={'User-Agent': USER_AGENT}, proxies=PROXY) as client:
         try:
-            write_one(*download_all(client, title), title)
+            data = download_all(client, title)
+            write_one(*data, title)
+            sleep(0.5)  # 防止 403
         except HTTPStatusError as e:
             print()
-            print(f'HTTP 状态异常：{e.response.status_code}')
+            print(f'HTTP 状态 {e.response.status_code}')
             return False
         else:
             return True
